@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import sys
+import json
 
 
 def get_search_results(
@@ -52,6 +53,18 @@ def extract_listings(parsed):
     return extracted
 
 
+def add_address(listing):
+    url = 'http://maps.googleapis.com/maps/api/geocode/json'
+    location = listing['location']
+    latlng = '{data-latitude},{data-longitude}'.format(**location)
+    parameters = {'latlng': latlng, 'sensor': 'false'}
+    response = requests.get(url, params=parameters)
+    response.raise_for_status()
+    data = json.loads(response.text)
+    listing['address'] = data['results'][0]['formatted_address']
+    return listing
+
+
 if __name__ == '__main__':
     import pprint
     if len(sys.argv) > 1 and sys.argv[1] == 'test':
@@ -62,5 +75,11 @@ if __name__ == '__main__':
         )
     doc = parse_source(html, encoding)
     listings = extract_listings(doc)
-    print len(listings)
-    pprint.pprint(listings[0])
+
+    # Don't want to get all the addresses every time I run test
+    # for listing in extract_listings(doc):
+    #     listing = add_address(listing)
+    #     pprint.pprint(listing)
+
+    listing = add_address(listings[0])
+    pprint.pprint(listing)
